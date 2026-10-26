@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>نظام كشف الاحتيال البنكي</title>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+
+  <style>
+    /* ======= المتغيرات ======= */
+    :root {
+      --bg:         #060b14;
+      --surface:    #0d1626;
+      --surface2:   #111d33;
+      --border:     #1a2d4a;
+      --accent:     #00d4ff;
+      --accent2:    #0090cc;
+      --danger:     #ff3b6b;
+      --safe:       #00e5a0;
+      --warn:       #ffb300;
+      --text:       #e8f0fe;
+      --muted:      #6b82a8;
+      --card-glow:  0 0 40px rgba(0,212,255,.08);
+      --font:       'Tajawal', sans-serif;
+      --mono:       'JetBrains Mono', monospace;
+    }
+
+    /* ======= أساسيات ======= */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ======= خلفية متحركة ======= */
+    .bg-grid {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background-image:
+        linear-gradient(rgba(0,212,255,.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,212,255,.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+    .bg-glow {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background: radial-gradient(ellipse 60% 40% at 50% 0%, rgba(0,144,204,.12) 0%, transparent 70%);
+    }
+
+    /* ======= تخطيط رئيسي ======= */
+    .wrapper {
+      position: relative; z-index: 1;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+    }
+
+    /* ======= رأس الصفحة ======= */
+    header {
+      text-align: center;
+      padding: 2.5rem 0 2rem;
+      animation: fadeDown .7s ease both;
+    }
+    .header-badge {
+      display: inline-flex; align-items: center; gap: .5rem;
+      background: rgba(0,212,255,.08);
+      border: 1px solid rgba(0,212,255,.2);
+      border-radius: 50px;
+      padding: .35rem 1rem;
+      font-size: .78rem;
+      color: var(--accent);
+      letter-spacing: .08em;
+      margin-bottom: 1.2rem;
+      font-family: var(--mono);
+    }
+    .pulse-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--safe);
+      animation: pulse 1.8s ease infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.7)} }
+
+    header h1 {
+      font-size: clamp(1.7rem, 4vw, 2.6rem);
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: .6rem;
+    }
+    .title-accent { color: var(--accent); }
+
+    header p {
+      color: var(--muted);
+      font-size: .95rem;
+      max-width: 480px;
+      margin: 0 auto;
+    }
+
+    /* ======= إحصاء سريع ======= */
+    .stats-bar {
+      display: flex; gap: 1rem; justify-content: center;
+      flex-wrap: wrap;
+      margin: 1.5rem 0 2.2rem;
+      animation: fadeUp .7s .15s ease both;
+    }
+    .stat {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: .6rem 1.2rem;
+      text-align: center;
+      min-width: 110px;
+    }
+    .stat-val {
+      font-family: var(--mono);
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--accent);
+    }
+    .stat-lbl {
+      font-size: .72rem;
+      color: var(--muted);
+      margin-top: .1rem;
+    }
+
+    /* ======= البطاقة الرئيسية ======= */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 2rem;
+      box-shadow: var(--card-glow);
+      animation: fadeUp .7s .25s ease both;
+    }
+
+    .section-title {
+      display: flex; align-items: center; gap: .6rem;
+      font-size: .8rem;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      margin-bottom: 1.4rem;
+      font-family: var(--mono);
+    }
+    .section-title::after {
+      content: '';
+      flex: 1; height: 1px;
+      background: linear-gradient(90deg, var(--border), transparent);
+    }
+
+    /* ======= الشبكة ======= */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+    @media(max-width:600px) {
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    }
+
+    /* ======= حقول الإدخال ======= */
+    .field { display: flex; flex-direction: column; gap: .5rem; }
+
+    label {
+      font-size: .82rem;
+      font-weight: 600;
+      color: var(--muted);
+      display: flex; align-items: center; gap: .4rem;
+    }
+    label .ico { font-size: 1rem; }
+
+    input, select {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: .7rem 1rem;
+      color: var(--text);
+      font-family: var(--font);
+      font-size: .95rem;
+      transition: border-color .2s, box-shadow .2s;
+      width: 100%;
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--accent2);
+      box-shadow: 0 0 0 3px rgba(0,144,204,.15);
+    }
+    select option { background: var(--surface2); }
+
+    /* ======= مفاتيح Toggle ======= */
+    .toggle-group {
+      display: flex;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .toggle-group input[type=radio] { display: none; }
+    .toggle-group label {
+      flex: 1; text-align: center;
+      padding: .7rem .5rem;
+      cursor: pointer;
+      font-size: .88rem;
+      color: var(--muted);
+      transition: all .2s;
+      border-radius: 0;
+      font-weight: 600;
+    }
+    .toggle-group input[type=radio]:checked + label {
+      background: var(--accent2);
+      color: #fff;
+    }
+
+    /* ======= شريط القيمة ======= */
+    .range-wrapper { position: relative; }
+    .range-val {
+      position: absolute; top: -1.6rem; left: 50%; transform: translateX(-50%);
+      font-family: var(--mono);
+      font-size: .78rem;
+      color: var(--accent);
+      background: var(--surface);
+      padding: .1rem .4rem;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      pointer-events: none;
+      white-space: nowrap;
+    }
+    input[type=range] {
+      -webkit-appearance: none;
+      height: 6px;
+      background: linear-gradient(90deg, var(--accent2) var(--pct,50%), var(--border) var(--pct,50%));
+      border-radius: 99px;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: 2px solid var(--bg);
+      box-shadow: 0 0 8px rgba(0,212,255,.4);
+      transition: transform .15s;
+    }
+    input[type=range]:hover::-webkit-slider-thumb { transform: scale(1.2); }
+
+    /* ======= فاصل ======= */
+    .divider { height: 1px; background: var(--border); margin: 1.6rem 0; }
+
+    /* ======= زر الإرسال ======= */
+    .btn-submit {
+      width: 100%;
+      padding: 1rem;
+      background: linear-gradient(135deg, var(--accent2), var(--accent));
+      border: none;
+      border-radius: 12px;
+      color: #fff;
+      font-family: var(--font);
+      font-size: 1.05rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform .15s, box-shadow .15s, opacity .15s;
+      display: flex; align-items: center; justify-content: center; gap: .7rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,144,204,.35); }
+    .btn-submit:active { transform: translateY(0); }
+    .btn-submit.loading { opacity: .7; pointer-events: none; }
+
+    .spinner {
+      width: 20px; height: 20px;
+      border: 2px solid rgba(255,255,255,.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      display: none;
+    }
+    .btn-submit.loading .spinner { display: block; }
+    .btn-submit.loading .btn-text { display: none; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ======= منطقة النتيجة ======= */
+    #result-area {
+      margin-top: 1.5rem;
+      display: none;
+      animation: fadeUp .5s ease both;
+    }
+    #result-area.visible { display: block; }
+
+    .result-card {
+      border-radius: 16px;
+      border: 2px solid;
+      overflow: hidden;
+    }
+    .result-card.safe  { border-color: var(--safe);   background: rgba(0,229,160,.06); }
+    .result-card.fraud { border-color: var(--danger);  background: rgba(255,59,107,.06); }
+    .result-card.warn  { border-color: var(--warn);    background: rgba(255,179,0,.06); }
+
+    .result-header {
+      padding: 1.2rem 1.5rem;
+      display: flex; align-items: center; gap: 1rem;
+    }
+    .result-icon {
+      width: 52px; height: 52px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.5rem;
+      flex-shrink: 0;
+    }
+    .safe  .result-icon { background: rgba(0,229,160,.15); }
+    .fraud .result-icon { background: rgba(255,59,107,.15); }
+
+    .result-title {
+      font-size: 1.15rem;
+      font-weight: 800;
+    }
+    .safe  .result-title { color: var(--safe); }
+    .fraud .result-title { color: var(--danger); }
+
+    .result-sub { font-size: .85rem; color: var(--muted); margin-top: .2rem; }
+
+    .result-body {
+      padding: 1rem 1.5rem 1.2rem;
+      border-top: 1px solid rgba(255,255,255,.06);
+      display: flex; gap: 1.5rem; flex-wrap: wrap;
+    }
+    .result-metric { flex: 1; min-width: 120px; }
+    .result-metric .lbl { font-size: .75rem; color: var(--muted); margin-bottom: .3rem; }
+    .result-metric .val { font-family: var(--mono); font-size: 1.1rem; font-weight: 600; }
+
+    /* ======= شريط الاحتمالية ======= */
+    .prob-bar-wrap { margin-top: .8rem; }
+    .prob-bar-bg {
+      height: 8px;
+      background: rgba(255,255,255,.07);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .prob-bar-fill {
+      height: 100%;
+      border-radius: 99px;
+      transition: width 1s cubic-bezier(.22,1,.36,1);
+    }
+    .safe  .prob-bar-fill { background: linear-gradient(90deg, var(--safe), #00b377); }
+    .fraud .prob-bar-fill { background: linear-gradient(90deg, var(--warn), var(--danger)); }
+    .prob-labels {
+      display: flex; justify-content: space-between;
+      font-size: .72rem; color: var(--muted);
+      margin-top: .4rem;
+      font-family: var(--mono);
+    }
+
+    /* ======= رسالة خطأ ======= */
+    .error-msg {
+      background: rgba(255,59,107,.1);
+      border: 1px solid rgba(255,59,107,.3);
+      color: #ff8fab;
+      padding: .8rem 1.2rem;
+      border-radius: 10px;
+      font-size: .9rem;
+      margin-top: 1rem;
+      display: none;
+    }
+    .error-msg.visible { display: block; }
+
+    /* ======= تذييل ======= */
+    footer {
+      text-align: center;
+      margin-top: 3rem;
+      color: var(--muted);
+      font-size: .78rem;
+      animation: fadeUp .7s .4s ease both;
+    }
+    footer span { color: var(--accent); }
+
+    /* ======= أنيماشن ======= */
+    @keyframes fadeDown { from{opacity:0;transform:translateY(-18px)} to{opacity:1;transform:none} }
+    @keyframes fadeUp   { from{opacity:0;transform:translateY(18px)}  to{opacity:1;transform:none} }
+  </style>
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <div class="bg-glow"></div>
+
+  <div class="wrapper">
+
+    <!-- ===== رأس الصفحة ===== -->
+    <header>
+      <div class="header-badge">
+        <span class="pulse-dot"></span>
+        AI Fraud Detection System · v1.0
+      </div>
+      <h1>نظام كشف <span class="title-accent">الاحتيال البنكي</span></h1>
+      <p>أدخل بيانات المعاملة وسيقوم الذكاء الاصطناعي بتحليلها فوراً</p>
+    </header>
+
+    <!-- ===== إحصائيات ===== -->
+    <div class="stats-bar">
+      <div class="stat">
+        <div class="stat-val">10,000</div>
+        <div class="stat-lbl">معاملة مدرَّب عليها</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val">100%</div>
+        <div class="stat-lbl">دقة Random Forest</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val">8</div>
+        <div class="stat-lbl">ميزة تحليلية</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val">3</div>
+        <div class="stat-lbl">نماذج مدرَّبة</div>
+      </div>
+    </div>
+
+    <!-- ===== البطاقة الرئيسية ===== -->
+    <div class="card">
+
+      <!-- بيانات المعاملة -->
+      <div class="section-title">📋 بيانات المعاملة</div>
+
+      <div class="grid-2" style="margin-bottom:1rem">
+        <!-- القيمة -->
+        <div class="field">
+          <label><span class="ico">💵</span> قيمة المعاملة ($)</label>
+          <input type="number" id="amount" min="0" max="5000" step="0.01"
+                 placeholder="مثال: 250.00" value="250.00"/>
+        </div>
+        <!-- الساعة -->
+        <div class="field">
+          <label><span class="ico">🕐</span> ساعة المعاملة (0–23)</label>
+          <input type="number" id="transaction_hour" min="0" max="23"
+                 placeholder="مثال: 14" value="14"/>
+        </div>
+      </div>
+
+      <!-- نوع التاجر -->
+      <div class="field" style="margin-bottom:1rem">
+        <label><span class="ico">🏪</span> فئة التاجر</label>
+        <select id="merchant_category">
+          {% for cat in categories %}
+          <option value="{{ cat }}">
+            {% if cat == 'Electronics' %}🖥 إلكترونيات (Electronics)
+            {% elif cat == 'Travel' %}✈️ سفر (Travel)
+            {% elif cat == 'Grocery' %}🛒 بقالة (Grocery)
+            {% elif cat == 'Food' %}🍔 مطاعم (Food)
+            {% elif cat == 'Clothing' %}👕 ملابس (Clothing)
+            {% else %}{{ cat }}{% endif %}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- معلومات الأمان -->
+      <div class="section-title">🔐 معلومات الأمان</div>
+
+      <div class="grid-2" style="margin-bottom:1rem">
+
+        <!-- معاملة خارجية -->
+        <div class="field">
+          <label><span class="ico">🌍</span> معاملة دولية خارج البلد؟</label>
+          <div class="toggle-group">
+            <input type="radio" name="foreign" id="foreign_no" value="0" checked/>
+            <label for="foreign_no">لا &nbsp;❌</label>
+            <input type="radio" name="foreign" id="foreign_yes" value="1"/>
+            <label for="foreign_yes">نعم &nbsp;✅</label>
+          </div>
+        </div>
+
+        <!-- تعارض الموقع -->
+        <div class="field">
+          <label><span class="ico">📍</span> تعارض في الموقع الجغرافي؟</label>
+          <div class="toggle-group">
+            <input type="radio" name="location" id="location_no" value="0" checked/>
+            <label for="location_no">لا &nbsp;❌</label>
+            <input type="radio" name="location" id="location_yes" value="1"/>
+            <label for="location_yes">نعم &nbsp;✅</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- درجة ثقة الجهاز -->
+      <div class="field" style="margin-bottom:1.4rem">
+        <label><span class="ico">📱</span> درجة ثقة الجهاز (0–100)</label>
+        <div class="range-wrapper" style="margin-top:1.4rem">
+          <span class="range-val" id="trust-val">75</span>
+          <input type="range" id="device_trust_score" min="0" max="100" value="75"
+                 oninput="updateRange(this,'trust-val')"/>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- بيانات العميل -->
+      <div class="section-title">👤 بيانات العميل</div>
+
+      <div class="grid-3" style="margin-bottom:1.4rem">
+        <!-- عدد المعاملات / 24 ساعة -->
+        <div class="field" style="grid-column: span 2;">
+          <label><span class="ico">⚡</span> عدد المعاملات في آخر 24 ساعة</label>
+          <div class="range-wrapper" style="margin-top:1.4rem">
+            <span class="range-val" id="velocity-val">3</span>
+            <input type="range" id="velocity_last_24h" min="0" max="30" value="3"
+                   oninput="updateRange(this,'velocity-val')"/>
+          </div>
+        </div>
+
+        <!-- عمر العميل -->
+        <div class="field">
+          <label><span class="ico">🎂</span> عمر العميل</label>
+          <input type="number" id="cardholder_age" min="18" max="90"
+                 placeholder="مثال: 35" value="35"/>
+        </div>
+      </div>
+
+      <!-- زر التحليل -->
+      <button class="btn-submit" id="analyzeBtn" onclick="analyze()">
+        <div class="spinner"></div>
+        <span class="btn-text">🔍 &nbsp; تحليل المعاملة الآن</span>
+      </button>
+
+      <!-- رسالة خطأ -->
+      <div class="error-msg" id="errorMsg"></div>
+
+      <!-- منطقة النتيجة -->
+      <div id="result-area">
+        <div class="result-card" id="resultCard">
+          <div class="result-header">
+            <div class="result-icon" id="resultIcon"></div>
+            <div>
+              <div class="result-title" id="resultTitle"></div>
+              <div class="result-sub"  id="resultSub"></div>
+            </div>
+          </div>
+          <div class="result-body">
+            <div class="result-metric">
+              <div class="lbl">احتمال الاحتيال</div>
+              <div class="val" id="resultProb"></div>
+              <div class="prob-bar-wrap">
+                <div class="prob-bar-bg">
+                  <div class="prob-bar-fill" id="probBar" style="width:0%"></div>
+                </div>
+                <div class="prob-labels"><span>0%</span><span>50%</span><span>100%</span></div>
+              </div>
+            </div>
+            <div class="result-metric">
+              <div class="lbl">مستوى الخطر</div>
+              <div class="val" id="resultRisk"></div>
+            </div>
+            <div class="result-metric">
+              <div class="lbl">قرار النموذج</div>
+              <div class="val" id="resultDecision"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- / card -->
+
+    <!-- ===== تذييل ===== -->
+    <footer>
+      مشروع تخرج &nbsp;·&nbsp; تعلم الآلة لكشف الاحتيال البنكي &nbsp;·&nbsp;
+      نموذج <span>Random Forest</span> &nbsp;·&nbsp; دقة <span>100%</span>
+    </footer>
+
+  </div><!-- / wrapper -->
+
+  <script>
+    /* ===== شريط الانزلاق ===== */
+    function updateRange(input, valId) {
+      document.getElementById(valId).textContent = input.value;
+      const pct = ((input.value - input.min) / (input.max - input.min)) * 100;
+      input.style.setProperty('--pct', pct + '%');
+    }
+    /* تهيئة أولية */
+    updateRange(document.getElementById('device_trust_score'), 'trust-val');
+    updateRange(document.getElementById('velocity_last_24h'),  'velocity-val');
+
+    /* ===== الإرسال ===== */
+    async function analyze() {
+      const btn = document.getElementById('analyzeBtn');
+      const errEl = document.getElementById('errorMsg');
+      errEl.classList.remove('visible');
+
+      // جمع القيم
+      const payload = {
+        amount:              parseFloat(document.getElementById('amount').value),
+        transaction_hour:    parseInt(document.getElementById('transaction_hour').value),
+        merchant_category:   document.getElementById('merchant_category').value,
+        foreign_transaction: parseInt(document.querySelector('input[name=foreign]:checked').value),
+        location_mismatch:   parseInt(document.querySelector('input[name=location]:checked').value),
+        device_trust_score:  parseInt(document.getElementById('device_trust_score').value),
+        velocity_last_24h:   parseInt(document.getElementById('velocity_last_24h').value),
+        cardholder_age:      parseInt(document.getElementById('cardholder_age').value),
+      };
+
+      // تحقق بسيط
+      if (isNaN(payload.amount) || payload.amount < 0) {
+        showError('⚠️ الرجاء إدخال قيمة معاملة صحيحة'); return;
+      }
+      if (isNaN(payload.transaction_hour) || payload.transaction_hour < 0 || payload.transaction_hour > 23) {
+        showError('⚠️ الساعة يجب أن تكون بين 0 و 23'); return;
+      }
+
+      btn.classList.add('loading');
+
+      try {
+        const res  = await fetch('/predict', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+
+        if (!data.success) { showError('خطأ: ' + data.error); return; }
+        showResult(data);
+      } catch(e) {
+        showError('تعذّر الاتصال بالخادم. تأكد أن Flask يعمل.');
+      } finally {
+        btn.classList.remove('loading');
+      }
+    }
+
+    function showResult(data) {
+      const area  = document.getElementById('result-area');
+      const card  = document.getElementById('resultCard');
+      const icon  = document.getElementById('resultIcon');
+      const title = document.getElementById('resultTitle');
+      const sub   = document.getElementById('resultSub');
+      const prob  = document.getElementById('resultProb');
+      const bar   = document.getElementById('probBar');
+      const risk  = document.getElementById('resultRisk');
+      const dec   = document.getElementById('resultDecision');
+
+      // إعادة التهيئة للأنيماشن
+      area.classList.remove('visible');
+      bar.style.width = '0%';
+
+      const isFraud = data.is_fraud;
+
+      card.className  = 'result-card ' + (isFraud ? 'fraud' : 'safe');
+      icon.textContent = isFraud ? '🚨' : '✅';
+
+      title.textContent = isFraud
+        ? 'تحذير: معاملة احتيالية مشتبه بها!'
+        : 'آمنة: المعاملة طبيعية';
+
+      sub.textContent = isFraud
+        ? 'يوصي النظام بمراجعة هذه المعاملة فوراً'
+        : 'لم يُكتشف أي نمط مشبوه في هذه المعاملة';
+
+      prob.textContent = data.probability + '%';
+
+      const riskColors = { 'منخفض': '#00e5a0', 'متوسط': '#ffb300', 'عالي': '#ff3b6b' };
+      risk.textContent = data.risk_level;
+      risk.style.color = riskColors[data.risk_level] || '#fff';
+
+      dec.textContent  = isFraud ? 'Fraudulent ❌' : 'Legitimate ✅';
+      dec.style.color  = isFraud ? 'var(--danger)' : 'var(--safe)';
+
+      area.classList.add('visible');
+
+      // أنيماشن الشريط بتأخير صغير
+      setTimeout(() => { bar.style.width = data.probability + '%'; }, 200);
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('errorMsg');
+      el.textContent = msg;
+      el.classList.add('visible');
+    }
+
+    /* Enter key */
+    document.addEventListener('keydown', e => { if(e.key === 'Enter') analyze(); });
+  </script>
+</body>
+</html>
